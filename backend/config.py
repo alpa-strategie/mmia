@@ -13,7 +13,7 @@ COUNCIL_MODELS = [
     "openai/gpt-5.1",
     "google/gemini-3-pro-preview",
     "anthropic/claude-sonnet-4.5",
-    "mistralai/mistral-large-2512",
+    "xai/grok-4-mini",
 ]
 
 # Modèle président - synthétise la réponse finale
