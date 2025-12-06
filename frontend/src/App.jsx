@@ -10,12 +10,12 @@ function App() {
   const [currentConversation, setCurrentConversation] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Load conversations on mount
+  // Charger les conversations au montage
   useEffect(() => {
     loadConversations();
   }, []);
 
-  // Load conversation details when selected
+  // Charger les détails de la conversation lors de la sélection
   useEffect(() => {
     if (currentConversationId) {
       loadConversation(currentConversationId);
@@ -27,7 +27,7 @@ function App() {
       const convs = await api.listConversations();
       setConversations(convs);
     } catch (error) {
-      console.error('Failed to load conversations:', error);
+      console.error('Échec du chargement des conversations:', error);
     }
   };
 
@@ -36,7 +36,7 @@ function App() {
       const conv = await api.getConversation(id);
       setCurrentConversation(conv);
     } catch (error) {
-      console.error('Failed to load conversation:', error);
+      console.error('Échec du chargement de la conversation:', error);
     }
   };
 
@@ -49,7 +49,7 @@ function App() {
       ]);
       setCurrentConversationId(newConv.id);
     } catch (error) {
-      console.error('Failed to create conversation:', error);
+      console.error('Échec de la création de la conversation:', error);
     }
   };
 
@@ -62,14 +62,14 @@ function App() {
 
     setIsLoading(true);
     try {
-      // Optimistically add user message to UI
+      // Ajouter de manière optimiste le message utilisateur à l'UI
       const userMessage = { role: 'user', content };
       setCurrentConversation((prev) => ({
         ...prev,
         messages: [...prev.messages, userMessage],
       }));
 
-      // Create a partial assistant message that will be updated progressively
+      // Créer un message assistant partiel qui sera mis à jour progressivement
       const assistantMessage = {
         role: 'assistant',
         stage1: null,
@@ -83,13 +83,13 @@ function App() {
         },
       };
 
-      // Add the partial assistant message
+      // Ajouter le message assistant partiel
       setCurrentConversation((prev) => ({
         ...prev,
         messages: [...prev.messages, assistantMessage],
       }));
 
-      // Send message with streaming
+      // Envoyer le message avec streaming
       await api.sendMessageStream(currentConversationId, content, (eventType, event) => {
         switch (eventType) {
           case 'stage1_start':
@@ -151,28 +151,28 @@ function App() {
             break;
 
           case 'title_complete':
-            // Reload conversations to get updated title
+            // Recharger les conversations pour obtenir le titre mis à jour
             loadConversations();
             break;
 
           case 'complete':
-            // Stream complete, reload conversations list
+            // Flux terminé, recharger la liste des conversations
             loadConversations();
             setIsLoading(false);
             break;
 
           case 'error':
-            console.error('Stream error:', event.message);
+            console.error('Erreur de flux:', event.message);
             setIsLoading(false);
             break;
 
           default:
-            console.log('Unknown event type:', eventType);
+            console.log('Type d\'événement inconnu:', eventType);
         }
       });
     } catch (error) {
-      console.error('Failed to send message:', error);
-      // Remove optimistic messages on error
+      console.error('Échec de l\'envoi du message:', error);
+      // Supprimer les messages optimistes en cas d'erreur
       setCurrentConversation((prev) => ({
         ...prev,
         messages: prev.messages.slice(0, -2),

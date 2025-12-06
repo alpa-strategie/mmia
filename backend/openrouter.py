@@ -1,4 +1,4 @@
-"""OpenRouter API client for making LLM requests."""
+"""Client API OpenRouter pour effectuer des requêtes LLM."""
 
 import httpx
 from typing import List, Dict, Any, Optional
@@ -11,15 +11,15 @@ async def query_model(
     timeout: float = 120.0
 ) -> Optional[Dict[str, Any]]:
     """
-    Query a single model via OpenRouter API.
+    Interroge un seul modèle via l'API OpenRouter.
 
     Args:
-        model: OpenRouter model identifier (e.g., "openai/gpt-4o")
-        messages: List of message dicts with 'role' and 'content'
-        timeout: Request timeout in seconds
+        model: Identifiant de modèle OpenRouter (ex: "openai/gpt-4o")
+        messages: Liste de dicts de messages avec 'role' et 'content'
+        timeout: Délai d'expiration de la requête en secondes
 
     Returns:
-        Response dict with 'content' and optional 'reasoning_details', or None if failed
+        Dict de réponse avec 'content' et optionnellement 'reasoning_details', ou None si échec
     """
     headers = {
         "Authorization": f"Bearer {OPENROUTER_API_KEY}",
@@ -49,7 +49,7 @@ async def query_model(
             }
 
     except Exception as e:
-        print(f"Error querying model {model}: {e}")
+        print(f"Erreur lors de l'interrogation du modèle {model}: {e}")
         return None
 
 
@@ -58,22 +58,22 @@ async def query_models_parallel(
     messages: List[Dict[str, str]]
 ) -> Dict[str, Optional[Dict[str, Any]]]:
     """
-    Query multiple models in parallel.
+    Interroge plusieurs modèles en parallèle.
 
     Args:
-        models: List of OpenRouter model identifiers
-        messages: List of message dicts to send to each model
+        models: Liste des identifiants de modèles OpenRouter
+        messages: Liste de dicts de messages à envoyer à chaque modèle
 
     Returns:
-        Dict mapping model identifier to response dict (or None if failed)
+        Dict mappant l'identifiant du modèle au dict de réponse (ou None si échec)
     """
     import asyncio
 
-    # Create tasks for all models
+    # Créer des tâches pour tous les modèles
     tasks = [query_model(model, messages) for model in models]
 
-    # Wait for all to complete
+    # Attendre que tous se terminent
     responses = await asyncio.gather(*tasks)
 
-    # Map models to their responses
+    # Mapper les modèles à leurs réponses
     return {model: response for model, response in zip(models, responses)}

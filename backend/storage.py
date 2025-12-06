@@ -1,4 +1,4 @@
-"""JSON-based storage for conversations."""
+"""Stockage basé sur JSON pour les conversations."""
 
 import json
 import os
@@ -9,35 +9,35 @@ from .config import DATA_DIR
 
 
 def ensure_data_dir():
-    """Ensure the data directory exists."""
+    """S'assure que le répertoire de données existe."""
     Path(DATA_DIR).mkdir(parents=True, exist_ok=True)
 
 
 def get_conversation_path(conversation_id: str) -> str:
-    """Get the file path for a conversation."""
+    """Obtient le chemin du fichier pour une conversation."""
     return os.path.join(DATA_DIR, f"{conversation_id}.json")
 
 
 def create_conversation(conversation_id: str) -> Dict[str, Any]:
     """
-    Create a new conversation.
+    Crée une nouvelle conversation.
 
     Args:
-        conversation_id: Unique identifier for the conversation
+        conversation_id: Identifiant unique pour la conversation
 
     Returns:
-        New conversation dict
+        Nouveau dict de conversation
     """
     ensure_data_dir()
 
     conversation = {
         "id": conversation_id,
         "created_at": datetime.utcnow().isoformat(),
-        "title": "New Conversation",
+        "title": "Nouvelle conversation",
         "messages": []
     }
 
-    # Save to file
+    # Sauvegarder dans le fichier
     path = get_conversation_path(conversation_id)
     with open(path, 'w') as f:
         json.dump(conversation, f, indent=2)
@@ -47,13 +47,13 @@ def create_conversation(conversation_id: str) -> Dict[str, Any]:
 
 def get_conversation(conversation_id: str) -> Optional[Dict[str, Any]]:
     """
-    Load a conversation from storage.
+    Charge une conversation depuis le stockage.
 
     Args:
-        conversation_id: Unique identifier for the conversation
+        conversation_id: Identifiant unique pour la conversation
 
     Returns:
-        Conversation dict or None if not found
+        Dict de conversation ou None si non trouvé
     """
     path = get_conversation_path(conversation_id)
 
@@ -66,10 +66,10 @@ def get_conversation(conversation_id: str) -> Optional[Dict[str, Any]]:
 
 def save_conversation(conversation: Dict[str, Any]):
     """
-    Save a conversation to storage.
+    Sauvegarde une conversation dans le stockage.
 
     Args:
-        conversation: Conversation dict to save
+        conversation: Dict de conversation à sauvegarder
     """
     ensure_data_dir()
 
@@ -80,10 +80,10 @@ def save_conversation(conversation: Dict[str, Any]):
 
 def list_conversations() -> List[Dict[str, Any]]:
     """
-    List all conversations (metadata only).
+    Liste toutes les conversations (métadonnées uniquement).
 
     Returns:
-        List of conversation metadata dicts
+        Liste de dicts de métadonnées de conversation
     """
     ensure_data_dir()
 
@@ -93,15 +93,15 @@ def list_conversations() -> List[Dict[str, Any]]:
             path = os.path.join(DATA_DIR, filename)
             with open(path, 'r') as f:
                 data = json.load(f)
-                # Return metadata only
+                # Retourner uniquement les métadonnées
                 conversations.append({
                     "id": data["id"],
                     "created_at": data["created_at"],
-                    "title": data.get("title", "New Conversation"),
+                    "title": data.get("title", "Nouvelle conversation"),
                     "message_count": len(data["messages"])
                 })
 
-    # Sort by creation time, newest first
+    # Trier par date de création, plus récent en premier
     conversations.sort(key=lambda x: x["created_at"], reverse=True)
 
     return conversations
@@ -109,15 +109,15 @@ def list_conversations() -> List[Dict[str, Any]]:
 
 def add_user_message(conversation_id: str, content: str):
     """
-    Add a user message to a conversation.
+    Ajoute un message utilisateur à une conversation.
 
     Args:
-        conversation_id: Conversation identifier
-        content: User message content
+        conversation_id: Identifiant de conversation
+        content: Contenu du message utilisateur
     """
     conversation = get_conversation(conversation_id)
     if conversation is None:
-        raise ValueError(f"Conversation {conversation_id} not found")
+        raise ValueError(f"Conversation {conversation_id} non trouvée")
 
     conversation["messages"].append({
         "role": "user",
@@ -134,17 +134,17 @@ def add_assistant_message(
     stage3: Dict[str, Any]
 ):
     """
-    Add an assistant message with all 3 stages to a conversation.
+    Ajoute un message assistant avec les 3 étapes à une conversation.
 
     Args:
-        conversation_id: Conversation identifier
-        stage1: List of individual model responses
-        stage2: List of model rankings
-        stage3: Final synthesized response
+        conversation_id: Identifiant de conversation
+        stage1: Liste des réponses individuelles des modèles
+        stage2: Liste des classements des modèles
+        stage3: Réponse finale synthétisée
     """
     conversation = get_conversation(conversation_id)
     if conversation is None:
-        raise ValueError(f"Conversation {conversation_id} not found")
+        raise ValueError(f"Conversation {conversation_id} non trouvée")
 
     conversation["messages"].append({
         "role": "assistant",
@@ -158,15 +158,15 @@ def add_assistant_message(
 
 def update_conversation_title(conversation_id: str, title: str):
     """
-    Update the title of a conversation.
+    Met à jour le titre d'une conversation.
 
     Args:
-        conversation_id: Conversation identifier
-        title: New title for the conversation
+        conversation_id: Identifiant de conversation
+        title: Nouveau titre pour la conversation
     """
     conversation = get_conversation(conversation_id)
     if conversation is None:
-        raise ValueError(f"Conversation {conversation_id} not found")
+        raise ValueError(f"Conversation {conversation_id} non trouvée")
 
     conversation["title"] = title
     save_conversation(conversation)

@@ -1,5 +1,5 @@
 def main():
-    print("Hello from llm-council!")
+    print("Bonjour depuis MMiA (Mes Mentors IA) !")
 
 
 if __name__ == "__main__":

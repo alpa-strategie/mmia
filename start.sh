@@ -1,31 +1,31 @@
 #!/bin/bash
 
-# LLM Council - Start script
+# MMiA (Mes Mentors IA) - Script de démarrage
 
-echo "Starting LLM Council..."
+echo "Démarrage de MMiA..."
 echo ""
 
-# Start backend
-echo "Starting backend on http://localhost:8001..."
+# Démarrer le backend
+echo "Démarrage du backend sur http://localhost:8001..."
 uv run python -m backend.main &
 BACKEND_PID=$!
 
-# Wait a bit for backend to start
+# Attendre un peu que le backend démarre
 sleep 2
 
-# Start frontend
-echo "Starting frontend on http://localhost:5173..."
+# Démarrer le frontend
+echo "Démarrage du frontend sur http://localhost:5173..."
 cd frontend
 npm run dev &
 FRONTEND_PID=$!
 
 echo ""
-echo "✓ LLM Council is running!"
+echo "✓ MMiA est en cours d'exécution !"
 echo "  Backend:  http://localhost:8001"
 echo "  Frontend: http://localhost:5173"
 echo ""
-echo "Press Ctrl+C to stop both servers"
+echo "Appuyez sur Ctrl+C pour arrêter les deux serveurs"
 
-# Wait for Ctrl+C
+# Attendre Ctrl+C
 trap "kill $BACKEND_PID $FRONTEND_PID 2>/dev/null; exit" SIGINT SIGTERM
 wait

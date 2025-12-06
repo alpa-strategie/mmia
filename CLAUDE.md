@@ -1,166 +1,166 @@
-# CLAUDE.md - Technical Notes for LLM Council
+# CLAUDE.md - Notes techniques pour MMiA (Mes Mentors IA)
 
-This file contains technical details, architectural decisions, and important implementation notes for future development sessions.
+Ce fichier contient des détails techniques, des décisions architecturales et des notes d'implémentation importantes pour les futures sessions de développement.
 
-## Project Overview
+## Vue d'ensemble du projet
 
-LLM Council is a 3-stage deliberation system where multiple LLMs collaboratively answer user questions. The key innovation is anonymized peer review in Stage 2, preventing models from playing favorites.
+MMiA (Mes Mentors IA) est un système de délibération en 3 étapes où plusieurs LLMs répondent collaborativement aux questions des utilisateurs. L'innovation clé est l'examen par les pairs anonymisé à l'étape 2, empêchant les modèles de favoriser certains.
 
 ## Architecture
 
-### Backend Structure (`backend/`)
+### Structure du Backend (`backend/`)
 
 **`config.py`**
-- Contains `COUNCIL_MODELS` (list of OpenRouter model identifiers)
-- Contains `CHAIRMAN_MODEL` (model that synthesizes final answer)
-- Uses environment variable `OPENROUTER_API_KEY` from `.env`
-- Backend runs on **port 8001** (NOT 8000 - user had another app on 8000)
+- Contient `COUNCIL_MODELS` (liste des identifiants de modèles OpenRouter)
+- Contient `CHAIRMAN_MODEL` (modèle qui synthétise la réponse finale)
+- Utilise la variable d'environnement `OPENROUTER_API_KEY` depuis `.env.local`
+- Le backend fonctionne sur le **port 8001** (PAS 8000 - l'utilisateur avait une autre application sur 8000)
 
 **`openrouter.py`**
-- `query_model()`: Single async model query
-- `query_models_parallel()`: Parallel queries using `asyncio.gather()`
-- Returns dict with 'content' and optional 'reasoning_details'
-- Graceful degradation: returns None on failure, continues with successful responses
+- `query_model()` : Requête de modèle unique asynchrone
+- `query_models_parallel()` : Requêtes parallèles utilisant `asyncio.gather()`
+- Retourne un dict avec 'content' et optionnellement 'reasoning_details'
+- Dégradation gracieuse : retourne None en cas d'échec, continue avec les réponses réussies
 
-**`council.py`** - The Core Logic
-- `stage1_collect_responses()`: Parallel queries to all council models
-- `stage2_collect_rankings()`:
-  - Anonymizes responses as "Response A, B, C, etc."
-  - Creates `label_to_model` mapping for de-anonymization
-  - Prompts models to evaluate and rank (with strict format requirements)
-  - Returns tuple: (rankings_list, label_to_model_dict)
-  - Each ranking includes both raw text and `parsed_ranking` list
-- `stage3_synthesize_final()`: Chairman synthesizes from all responses + rankings
-- `parse_ranking_from_text()`: Extracts "FINAL RANKING:" section, handles both numbered lists and plain format
-- `calculate_aggregate_rankings()`: Computes average rank position across all peer evaluations
+**`council.py`** - La logique centrale
+- `stage1_collect_responses()` : Requêtes parallèles à tous les modèles du conseil
+- `stage2_collect_rankings()` :
+  - Anonymise les réponses en "Response A, B, C, etc."
+  - Crée un mappage `label_to_model` pour la dé-anonymisation
+  - Invite les modèles à évaluer et classer (avec des exigences de format strictes)
+  - Retourne un tuple : (rankings_list, label_to_model_dict)
+  - Chaque classement inclut à la fois le texte brut et la liste `parsed_ranking`
+- `stage3_synthesize_final()` : Le président synthétise à partir de toutes les réponses + classements
+- `parse_ranking_from_text()` : Extrait la section "FINAL RANKING:", gère à la fois les listes numérotées et le format simple
+- `calculate_aggregate_rankings()` : Calcule la position de classement moyenne à travers toutes les évaluations par les pairs
 
 **`storage.py`**
-- JSON-based conversation storage in `data/conversations/`
-- Each conversation: `{id, created_at, messages[]}`
-- Assistant messages contain: `{role, stage1, stage2, stage3}`
-- Note: metadata (label_to_model, aggregate_rankings) is NOT persisted to storage, only returned via API
+- Stockage de conversation basé sur JSON dans `data/conversations/`
+- Chaque conversation : `{id, created_at, messages[]}`
+- Les messages de l'assistant contiennent : `{role, stage1, stage2, stage3}`
+- Note : les métadonnées (label_to_model, aggregate_rankings) ne sont PAS persistées dans le stockage, seulement retournées via l'API
 
 **`main.py`**
-- FastAPI app with CORS enabled for localhost:5173 and localhost:3000
-- POST `/api/conversations/{id}/message` returns metadata in addition to stages
-- Metadata includes: label_to_model mapping and aggregate_rankings
+- Application FastAPI avec CORS activé pour localhost:5173 et localhost:3000
+- POST `/api/conversations/{id}/message` retourne des métadonnées en plus des étapes
+- Les métadonnées incluent : mappage label_to_model et aggregate_rankings
 
-### Frontend Structure (`frontend/src/`)
+### Structure du Frontend (`frontend/src/`)
 
 **`App.jsx`**
-- Main orchestration: manages conversations list and current conversation
-- Handles message sending and metadata storage
-- Important: metadata is stored in the UI state for display but not persisted to backend JSON
+- Orchestration principale : gère la liste des conversations et la conversation actuelle
+- Gère l'envoi de messages et le stockage des métadonnées
+- Important : les métadonnées sont stockées dans l'état de l'interface pour l'affichage mais ne sont pas persistées dans le JSON du backend
 
 **`components/ChatInterface.jsx`**
-- Multiline textarea (3 rows, resizable)
-- Enter to send, Shift+Enter for new line
-- User messages wrapped in markdown-content class for padding
+- Zone de texte multiligne (3 lignes, redimensionnable)
+- Entrée pour envoyer, Maj+Entrée pour nouvelle ligne
+- Messages utilisateur enveloppés dans la classe markdown-content pour le rembourrage
 
 **`components/Stage1.jsx`**
-- Tab view of individual model responses
-- ReactMarkdown rendering with markdown-content wrapper
+- Vue par onglets des réponses individuelles des modèles
+- Rendu ReactMarkdown avec enveloppe markdown-content
 
 **`components/Stage2.jsx`**
-- **Critical Feature**: Tab view showing RAW evaluation text from each model
-- De-anonymization happens CLIENT-SIDE for display (models receive anonymous labels)
-- Shows "Extracted Ranking" below each evaluation so users can validate parsing
-- Aggregate rankings shown with average position and vote count
-- Explanatory text clarifies that boldface model names are for readability only
+- **Fonctionnalité critique** : Vue par onglets montrant le texte d'évaluation BRUT de chaque modèle
+- La dé-anonymisation se produit CÔTÉ CLIENT pour l'affichage (les modèles reçoivent des étiquettes anonymes)
+- Affiche "Classement extrait" sous chaque évaluation pour que les utilisateurs puissent valider l'analyse
+- Les classements agrégés sont affichés avec la position moyenne et le nombre de votes
+- Le texte explicatif clarifie que les noms de modèles en gras sont uniquement pour la lisibilité
 
 **`components/Stage3.jsx`**
-- Final synthesized answer from chairman
-- Green-tinted background (#f0fff0) to highlight conclusion
+- Réponse finale synthétisée par le président
+- Arrière-plan teinté de vert (#f0fff0) pour mettre en évidence la conclusion
 
-**Styling (`*.css`)**
-- Light mode theme (not dark mode)
-- Primary color: #4a90e2 (blue)
-- Global markdown styling in `index.css` with `.markdown-content` class
-- 12px padding on all markdown content to prevent cluttered appearance
+**Styles (`*.css`)**
+- Thème en mode clair (pas de mode sombre)
+- Couleur principale : #4a90e2 (bleu)
+- Style markdown global dans `index.css` avec la classe `.markdown-content`
+- Rembourrage de 12px sur tout le contenu markdown pour éviter l'apparence encombrée
 
-## Key Design Decisions
+## Décisions de conception clés
 
-### Stage 2 Prompt Format
-The Stage 2 prompt is very specific to ensure parseable output:
+### Format du prompt de l'étape 2
+Le prompt de l'étape 2 est très spécifique pour garantir une sortie analysable :
 ```
-1. Evaluate each response individually first
-2. Provide "FINAL RANKING:" header
-3. Numbered list format: "1. Response C", "2. Response A", etc.
-4. No additional text after ranking section
-```
-
-This strict format allows reliable parsing while still getting thoughtful evaluations.
-
-### De-anonymization Strategy
-- Models receive: "Response A", "Response B", etc.
-- Backend creates mapping: `{"Response A": "openai/gpt-5.1", ...}`
-- Frontend displays model names in **bold** for readability
-- Users see explanation that original evaluation used anonymous labels
-- This prevents bias while maintaining transparency
-
-### Error Handling Philosophy
-- Continue with successful responses if some models fail (graceful degradation)
-- Never fail the entire request due to single model failure
-- Log errors but don't expose to user unless all models fail
-
-### UI/UX Transparency
-- All raw outputs are inspectable via tabs
-- Parsed rankings shown below raw text for validation
-- Users can verify system's interpretation of model outputs
-- This builds trust and allows debugging of edge cases
-
-## Important Implementation Details
-
-### Relative Imports
-All backend modules use relative imports (e.g., `from .config import ...`) not absolute imports. This is critical for Python's module system to work correctly when running as `python -m backend.main`.
-
-### Port Configuration
-- Backend: 8001 (changed from 8000 to avoid conflict)
-- Frontend: 5173 (Vite default)
-- Update both `backend/main.py` and `frontend/src/api.js` if changing
-
-### Markdown Rendering
-All ReactMarkdown components must be wrapped in `<div className="markdown-content">` for proper spacing. This class is defined globally in `index.css`.
-
-### Model Configuration
-Models are hardcoded in `backend/config.py`. Chairman can be same or different from council members. The current default is Gemini as chairman per user preference.
-
-## Common Gotchas
-
-1. **Module Import Errors**: Always run backend as `python -m backend.main` from project root, not from backend directory
-2. **CORS Issues**: Frontend must match allowed origins in `main.py` CORS middleware
-3. **Ranking Parse Failures**: If models don't follow format, fallback regex extracts any "Response X" patterns in order
-4. **Missing Metadata**: Metadata is ephemeral (not persisted), only available in API responses
-
-## Future Enhancement Ideas
-
-- Configurable council/chairman via UI instead of config file
-- Streaming responses instead of batch loading
-- Export conversations to markdown/PDF
-- Model performance analytics over time
-- Custom ranking criteria (not just accuracy/insight)
-- Support for reasoning models (o1, etc.) with special handling
-
-## Testing Notes
-
-Use `test_openrouter.py` to verify API connectivity and test different model identifiers before adding to council. The script tests both streaming and non-streaming modes.
-
-## Data Flow Summary
-
-```
-User Query
-    ↓
-Stage 1: Parallel queries → [individual responses]
-    ↓
-Stage 2: Anonymize → Parallel ranking queries → [evaluations + parsed rankings]
-    ↓
-Aggregate Rankings Calculation → [sorted by avg position]
-    ↓
-Stage 3: Chairman synthesis with full context
-    ↓
-Return: {stage1, stage2, stage3, metadata}
-    ↓
-Frontend: Display with tabs + validation UI
+1. Évaluer chaque réponse individuellement d'abord
+2. Fournir un en-tête "FINAL RANKING:"
+3. Format de liste numérotée : "1. Response C", "2. Response A", etc.
+4. Pas de texte supplémentaire après la section de classement
 ```
 
-The entire flow is async/parallel where possible to minimize latency.
+Ce format strict permet une analyse fiable tout en obtenant des évaluations réfléchies.
+
+### Stratégie de dé-anonymisation
+- Les modèles reçoivent : "Response A", "Response B", etc.
+- Le backend crée un mappage : `{"Response A": "openai/gpt-5.1", ...}`
+- Le frontend affiche les noms de modèles en **gras** pour la lisibilité
+- Les utilisateurs voient une explication que l'évaluation originale utilisait des étiquettes anonymes
+- Cela évite les biais tout en maintenant la transparence
+
+### Philosophie de gestion des erreurs
+- Continuer avec les réponses réussies si certains modèles échouent (dégradation gracieuse)
+- Ne jamais faire échouer la requête entière en raison de l'échec d'un seul modèle
+- Journaliser les erreurs mais ne pas les exposer à l'utilisateur sauf si tous les modèles échouent
+
+### Transparence UI/UX
+- Toutes les sorties brutes sont inspectables via des onglets
+- Les classements analysés sont affichés sous le texte brut pour validation
+- Les utilisateurs peuvent vérifier l'interprétation du système des sorties du modèle
+- Cela renforce la confiance et permet le débogage des cas limites
+
+## Détails d'implémentation importants
+
+### Imports relatifs
+Tous les modules backend utilisent des imports relatifs (par exemple, `from .config import ...`) et non des imports absolus. C'est crucial pour que le système de modules de Python fonctionne correctement lors de l'exécution avec `python -m backend.main`.
+
+### Configuration des ports
+- Backend : 8001 (changé de 8000 pour éviter les conflits)
+- Frontend : 5173 (par défaut Vite)
+- Mettre à jour à la fois `backend/main.py` et `frontend/src/api.js` en cas de changement
+
+### Rendu Markdown
+Tous les composants ReactMarkdown doivent être enveloppés dans `<div className="markdown-content">` pour un espacement approprié. Cette classe est définie globalement dans `index.css`.
+
+### Configuration des modèles
+Les modèles sont codés en dur dans `backend/config.py`. Le président peut être le même ou différent des membres du conseil. La valeur par défaut actuelle est Gemini comme président selon la préférence de l'utilisateur.
+
+## Pièges courants
+
+1. **Erreurs d'import de module** : Toujours exécuter le backend avec `python -m backend.main` depuis la racine du projet, pas depuis le répertoire backend
+2. **Problèmes CORS** : Le frontend doit correspondre aux origines autorisées dans le middleware CORS de `main.py`
+3. **Échecs d'analyse de classement** : Si les modèles ne suivent pas le format, une regex de secours extrait tous les motifs "Response X" dans l'ordre
+4. **Métadonnées manquantes** : Les métadonnées sont éphémères (non persistées), disponibles uniquement dans les réponses API
+
+## Idées d'améliorations futures
+
+- Conseil/président configurable via l'interface au lieu du fichier de configuration
+- Réponses en streaming au lieu du chargement par lots
+- Exporter les conversations vers markdown/PDF
+- Analyses de performances des modèles au fil du temps
+- Critères de classement personnalisés (pas seulement précision/perspicacité)
+- Support pour les modèles de raisonnement (o1, etc.) avec une gestion spéciale
+
+## Notes de test
+
+Utilisez `test_openrouter.py` pour vérifier la connectivité de l'API et tester différents identifiants de modèles avant de les ajouter au conseil. Le script teste à la fois les modes streaming et non-streaming.
+
+## Résumé du flux de données
+
+```
+Requête utilisateur
+    ↓
+Étape 1 : Requêtes parallèles → [réponses individuelles]
+    ↓
+Étape 2 : Anonymiser → Requêtes de classement parallèles → [évaluations + classements analysés]
+    ↓
+Calcul des classements agrégés → [triés par position moyenne]
+    ↓
+Étape 3 : Synthèse par le président avec contexte complet
+    ↓
+Retour : {stage1, stage2, stage3, metadata}
+    ↓
+Frontend : Affichage avec onglets + interface de validation
+```
+
+L'ensemble du flux est asynchrone/parallèle lorsque c'est possible pour minimiser la latence.

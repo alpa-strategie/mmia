@@ -1,23 +1,23 @@
 /**
- * API client for the LLM Council backend.
+ * Client API pour le backend MMiA (Mes Mentors IA).
  */
 
 const API_BASE = 'http://localhost:8001';
 
 export const api = {
   /**
-   * List all conversations.
+   * Liste toutes les conversations.
    */
   async listConversations() {
     const response = await fetch(`${API_BASE}/api/conversations`);
     if (!response.ok) {
-      throw new Error('Failed to list conversations');
+      throw new Error('Échec de la liste des conversations');
     }
     return response.json();
   },
 
   /**
-   * Create a new conversation.
+   * Crée une nouvelle conversation.
    */
   async createConversation() {
     const response = await fetch(`${API_BASE}/api/conversations`, {
@@ -28,26 +28,26 @@ export const api = {
       body: JSON.stringify({}),
     });
     if (!response.ok) {
-      throw new Error('Failed to create conversation');
+      throw new Error('Échec de la création de la conversation');
     }
     return response.json();
   },
 
   /**
-   * Get a specific conversation.
+   * Obtient une conversation spécifique.
    */
   async getConversation(conversationId) {
     const response = await fetch(
       `${API_BASE}/api/conversations/${conversationId}`
     );
     if (!response.ok) {
-      throw new Error('Failed to get conversation');
+      throw new Error('Échec de l\'obtention de la conversation');
     }
     return response.json();
   },
 
   /**
-   * Send a message in a conversation.
+   * Envoie un message dans une conversation.
    */
   async sendMessage(conversationId, content) {
     const response = await fetch(
@@ -61,16 +61,16 @@ export const api = {
       }
     );
     if (!response.ok) {
-      throw new Error('Failed to send message');
+      throw new Error('Échec de l\'envoi du message');
     }
     return response.json();
   },
 
   /**
-   * Send a message and receive streaming updates.
-   * @param {string} conversationId - The conversation ID
-   * @param {string} content - The message content
-   * @param {function} onEvent - Callback function for each event: (eventType, data) => void
+   * Envoie un message et reçoit des mises à jour en streaming.
+   * @param {string} conversationId - L'ID de la conversation
+   * @param {string} content - Le contenu du message
+   * @param {function} onEvent - Fonction de rappel pour chaque événement: (eventType, data) => void
    * @returns {Promise<void>}
    */
   async sendMessageStream(conversationId, content, onEvent) {
@@ -86,7 +86,7 @@ export const api = {
     );
 
     if (!response.ok) {
-      throw new Error('Failed to send message');
+      throw new Error('Échec de l\'envoi du message');
     }
 
     const reader = response.body.getReader();
@@ -106,7 +106,7 @@ export const api = {
             const event = JSON.parse(data);
             onEvent(event.type, event);
           } catch (e) {
-            console.error('Failed to parse SSE event:', e);
+            console.error('Échec de l\'analyse de l\'événement SSE:', e);
           }
         }
       }

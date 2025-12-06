@@ -1,1 +1,1 @@
-"""LLM Council backend package."""
+"""Package backend pour MMiA (Mes Mentors IA)."""
